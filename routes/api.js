@@ -216,13 +216,22 @@ const ApiRouter = (regModel, teaModel, stuModel) => {
 
         let rs = await teacher.get_common_students(req.query.teacher)
 
-        // Format data before response
-        let arrStudent = [];
-        for (row of rs['Data']) {
-            arrStudent.push(row.email);
+        if(rs['Status'] == 'Fail') {
+            res.status(500).send({
+                "Status": "Fail",
+                "Message": rs['Message']
+            })
+        } else {
+            // Format data before response
+            let arrStudent = [];
+            for (row of rs['Data']) {
+                arrStudent.push(row.email);
+            }
+
+            res.send(arrStudent);
         }
 
-        res.send(arrStudent);
+        
     })
     
 

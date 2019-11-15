@@ -2,14 +2,7 @@
 const connection = require('./db');
 
 class Registration {
-    constructor() {
-        connection.on('error', (err) => {
-            res.status(500).send({
-                "Status": "Fail",
-                "Message": err
-            })
-        })
-    }
+    constructor() {}
 
     add_registration(teacher_id, student_id) {
         return new Promise((resolve, rej) => {
