@@ -2,7 +2,14 @@
 const connection = require('./db.js');
 
 class Student {
-    constructor(){}
+    constructor(){
+        connection.on('error', (err) => {
+            res.status(500).send({
+                "Status": "Fail",
+                "Message": err
+            })
+        })
+    }
 
     get_student_by_email(email) {
         return new Promise((resolve, reject) => {
