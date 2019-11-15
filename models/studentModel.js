@@ -31,8 +31,8 @@ class Student {
 
     add_student(email) {
         return new Promise((resolve, reject) => {
-            let sql = "INSERT INTO ?? (??) VALUES (?)";
-            let inserts = ['student', 'email', email];
+            let sql = "INSERT INTO ?? (??, ??, ??) VALUES (?, NOW(), NOW())";
+            let inserts = ['student', 'email', 'modified_time', 'created_time', email];
             sql = connection.format(sql, inserts);
 
             connection.query(sql, (err, res) => {

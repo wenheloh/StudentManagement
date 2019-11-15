@@ -31,8 +31,8 @@ class Teacher {
 
     add_teacher(email) {
         return new Promise((resolve, reject) => {
-            let sql = "INSERT INTO ?? (??) VALUES (?)";
-            let inserts = ['teacher', 'email', email];
+            let sql = "INSERT INTO ?? (??, ??, ??) VALUES (?, NOW(), NOW())";
+            let inserts = ['teacher', 'email', 'modified_time', 'created_time', email];
             sql = connection.format(sql, inserts);
 
             connection.query(sql, (err, res) => {
@@ -105,7 +105,7 @@ class Teacher {
 
     suspend_student(email) {
         return new Promise((resolve, reject) => {
-            let sql = "UPDATE ?? SET suspended = 1 WHERE email = ? LIMIT 1"
+            let sql = "UPDATE ?? SET suspended = 1, modified_time = NOW() WHERE email = ? LIMIT 1"
             let inserts = ['student', email];
             sql = connection.format(sql, inserts);
 

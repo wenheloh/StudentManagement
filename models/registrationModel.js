@@ -6,8 +6,8 @@ class Registration {
 
     add_registration(teacher_id, student_id) {
         return new Promise((resolve, rej) => {
-            let sql = "INSERT INTO ?? (??, ??) VALUES (?, ?)";
-            let inserts = ['registration', 'teacher_id', 'student_id', teacher_id, student_id];
+            let sql = "INSERT INTO ?? (??, ??, ??) VALUES (?, ?, NOW())";
+            let inserts = ['registration', 'teacher_id', 'created_time', 'student_id', teacher_id, student_id];
             sql = connection.format(sql, inserts);
             
             connection.query(sql, (err, res) => {
