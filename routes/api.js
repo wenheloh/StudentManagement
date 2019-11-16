@@ -60,10 +60,10 @@ const ApiRouter = (regModel, teaModel, stuModel) => {
                     if(rs['Status'] == 'Success')
                         teacher_id = rs['Data'];
                     else 
-                        res.send(rs);
+                        res.status(500).send(rs);
                 }
             } else {
-                res.send(rsTeacher);
+                res.status(500).send(rsTeacher);
                 bResult = false;
             }
 
@@ -79,25 +79,26 @@ const ApiRouter = (regModel, teaModel, stuModel) => {
                         if(rsStudent['Data'] != '') {
                             student_id = rsStudent['Data'][0]['id'];
                         } else {
-                            // Add teacher when not found
+                            // Add student when not found
                             let rs = await student.add_student(students_email[i]);
 
                             if(rs['Status'] == 'Success')
                                 student_id = rs['Data'];
                             else 
-                                res.send(rs);
+                                res.status(500).send(rs);
                         }
                     } else {
-                        res.send(rsStudent); // Send error message
+                        // mysql query error, just in case
+                        res.status(500).send(rsStudent); // Send error message
                         bResult = false;
                     }
 
                     let result = await reg.add_registration(teacher_id, student_id);
                     if(result['Status'] == "Fail") {
                         if(result['Message'] == 'ER_DUP_ENTRY') {
-                            sErrorMsg += "Fail to register student: " + students_email[i] + "; ";
+                            sErrorMsg += "Student - " + students_email[i] + " has already registered to the teacher; ";
                         } else {
-                            res.send(result);
+                            res.status(500).send(result);
                         }
                         
                         bResult = false;
