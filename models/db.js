@@ -1,19 +1,14 @@
 'use strict';
 
 const mysql = require('mysql');
-
-/* var connection = mysql.createConnection({
-    host: 'localhost',
-    user: 'root',
-    password: '',
-    database: 'express'
-}) */
+const dotenv = require('dotenv');
+dotenv.config();
 
 var connection = mysql.createConnection({
-    host: 'sql12.freemysqlhosting.net',
-    user: 'sql12312172',
-    password: 'aFz5xysVdB',
-    database: 'sql12312172'
+    host: process.env.DBHOST,
+    user: process.env.DBUSERNAME,
+    password: process.env.DBPASSWORD,
+    database: process.env.DBNAME
 })
 
 module.exports = connection; 

@@ -53,6 +53,30 @@ class Student {
 
         })
     }
+
+    suspend_student(email) {
+        return new Promise((resolve, reject) => {
+            let sql = "UPDATE ?? SET suspended = 1, modified_time = NOW() WHERE email = ? LIMIT 1"
+            let inserts = ['student', email];
+            sql = connection.format(sql, inserts);
+
+            connection.query(sql, (err, res) => {
+                if(err) {
+                    console.log(Date() + ": " + err.code + " - " + err.sqlMessage);
+
+                    resolve({
+                        "Status": "Fail",
+                        "Message": err.code
+                    })
+                } else {
+                    resolve({
+                        "Status": "Success",
+                        "Data": res.affectedRows
+                    })
+                }
+            })
+        })
+    }
 }
 
 module.exports = Student;

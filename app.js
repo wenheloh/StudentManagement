@@ -3,7 +3,6 @@ var express = require('express');
 var path = require('path');
 var cookieParser = require('cookie-parser');
 var logger = require('morgan');
-/* var mysql = require('mysql'); */
 var Registration = require('./models/registrationModel');
 var Teacher = require('./models/teacherModel');
 var Student = require('./models/studentModel');
@@ -11,10 +10,6 @@ var Student = require('./models/studentModel');
 var apiRouter = require('./routes/api');
 
 var app = express();
-
-// view engine setup
-/* app.set('views', path.join(__dirname, 'views'));
-app.set('view engine', 'jade'); */
 
 app.use(logger('dev'));
 app.use(express.json());
@@ -45,17 +40,5 @@ app.use(function(err, req, res, next) {
   console.log(res.locals.error);
   res.json({"Status": "Fail", "Message": err.message})
 });
-
-//Database connection
-/* app.use(function(req, res, next){
-	res.locals.connection = mysql.createConnection({
-		host     : 'localhost',
-		user     : 'root',
-		password : ' ',
-		database : 'express'
-	});
-	res.locals.connect();
-	next();
-}); */
 
 module.exports = app;
