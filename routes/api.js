@@ -250,19 +250,26 @@ const ApiRouter = (Registration, Teacher, Student) => {
                         }
                     })
 
-                    if(arrStudent == '') {
-                        // First email, first array, to be filtered later
-                        for (student of rs) {
-                            arrStudent.push(student.email);
+                    
+                    if(rs.length != 0) {
+                        if(arrStudent == '') {
+                            // First email, first array, to be filtered later
+                            for (student of rs) {
+                                arrStudent.push(student.email);
+                            }
+                        } else {
+                            arrStudentNew = [];
+                            
+                            for (student of rs) {
+                                arrStudentNew.push(student.email);
+                            }
+    
+                            arrStudent = arrStudent.filter(value => arrStudentNew.includes(value));
                         }
                     } else {
-                        arrStudentNew = [];
-                        
-                        for (student of rs) {
-                            arrStudentNew.push(student.email);
-                        }
-
-                        arrStudent = arrStudent.filter(value => arrStudentNew.includes(value));
+                        // One of the teacher has 0 student registered.
+                        arrStudent = [];
+                        break;
                     }
                 }
 
