@@ -3,9 +3,9 @@ var express = require('express');
 var path = require('path');
 var cookieParser = require('cookie-parser');
 var logger = require('morgan');
-var Registration = require('./models/registrationModel');
+/* var Registration = require('./models/registrationModel');
 var Teacher = require('./models/teacherModel');
-var Student = require('./models/studentModel');
+var Student = require('./models/studentModel'); */
 
 var apiRouter = require('./routes/api');
 
@@ -18,11 +18,12 @@ app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Create object for each model
-const registration = {Registration};
+/* const registration = {Registration};
 const teacher = {Teacher};
-const student = {Student};
+const student = {Student}; */
+const { Teacher, Registration, Student } = require('./sequelize')
 
-app.use('/api', apiRouter(registration, teacher, student));
+app.use('/api', apiRouter(Registration, Teacher, Student));
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {

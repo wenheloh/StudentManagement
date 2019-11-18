@@ -1,10 +1,7 @@
 const Router = require('express').Router;
 
-const ApiRouter = (regModel, teaModel, stuModel) => {
+const ApiRouter = (Registration, Teacher, Student) => {
 
-    const {Registration} = regModel;
-    const {Teacher} = teaModel;
-    const {Student} = stuModel;
     const router = new Router();
 
 
@@ -19,10 +16,6 @@ const ApiRouter = (regModel, teaModel, stuModel) => {
     */
     router.post('/register', async function(req, res, next) {
     
-        // Initialize objects
-        let teacher = new Teacher();
-        let student = new Student();
-        let reg = new Registration();
         let bResult = true;
 
         // Data from request
@@ -47,70 +40,43 @@ const ApiRouter = (regModel, teaModel, stuModel) => {
 
         if(bResult) {
             // Get teacher_id
-            let teacher_id = 0;
-            let rsTeacher = await teacher.get_teacher_by_email(teacher_email);
+
+            let [rsTeacher, created] = await Teacher.findOrCreate({
+                where: {email: teacher_email}, 
+                defaults: {email: teacher_email}
+            });
             
-            if(rsTeacher['Status'] == 'Success') {
-                if(rsTeacher['Data'] != '') {
-                    teacher_id = rsTeacher['Data'][0]['id'];
-                } else {
-                    // Add teacher when not found
-                    let rs = await teacher.add_teacher(teacher_email);
-                    
-                    if(rs['Status'] == 'Success')
-                        teacher_id = rs['Data'];
-                    else 
-                        res.status(500).send(rs);
+            let teacher_id = rsTeacher.get().id;
+
+            // Find and add student
+            let student_id = 0;
+            let sErrorMsg = [];
+
+            for(let i=0; i<students_email.length; i++) {   
+                
+                let [rsStudent, created] = await Student.findOrCreate({
+                    where: {email: students_email[i]}, 
+                    defaults: {email: students_email[i]}
+                });
+                
+                student_id = rsStudent.get().id;
+                
+                try {
+                    let result = await Registration.create({
+                        TeacherId: teacher_id,
+                        StudentId: student_id
+                    })
+                } catch(err) {
+                    if(err.name == 'SequelizeUniqueConstraintError')
+                        sErrorMsg.push("Duplicate entry for student: " + students_email[i])
                 }
-            } else {
-                res.status(500).send(rsTeacher);
-                bResult = false;
             }
 
-            if(bResult) {
-                // Find and add student
-                let student_id = 0;
-                let sErrorMsg = '';
-
-                for(let i=0; i<students_email.length; i++) {    
-                    let rsStudent = await student.get_student_by_email(students_email[i]);
-                    
-                    if(rsStudent['Status'] == 'Success') {
-                        if(rsStudent['Data'] != '') {
-                            student_id = rsStudent['Data'][0]['id'];
-                        } else {
-                            // Add student when not found
-                            let rs = await student.add_student(students_email[i]);
-
-                            if(rs['Status'] == 'Success')
-                                student_id = rs['Data'];
-                            else 
-                                res.status(500).send(rs);
-                        }
-                    } else {
-                        // mysql query error, just in case
-                        res.status(500).send(rsStudent); // Send error message
-                        bResult = false;
-                    }
-
-                    let result = await reg.add_registration(teacher_id, student_id);
-                    if(result['Status'] == "Fail") {
-                        if(result['Message'] == 'ER_DUP_ENTRY') {
-                            sErrorMsg += "Student - " + students_email[i] + " has already registered to the teacher; ";
-                        } else {
-                            res.status(500).send(result);
-                        }
-                        
-                        bResult = false;
-                    }
-                }
-
-                if(sErrorMsg != '') {
-                    res.send({
-                        "Status": "Fail",
-                        "Message": sErrorMsg
-                    })
-                }
+            if(sErrorMsg != '') {
+                res.send({
+                    "Status": "Fail",
+                    "Message": sErrorMsg
+                })
             }
         }
 
@@ -127,7 +93,6 @@ const ApiRouter = (regModel, teaModel, stuModel) => {
     */
     router.post('/suspend', async function(req, res, next) {
 
-        let student = new Student();
         let bResult = true;
         
         if(req.body.student == undefined || req.body.student == '') {
@@ -140,22 +105,18 @@ const ApiRouter = (regModel, teaModel, stuModel) => {
         }
             
         if(bResult) {
-            let rs = await student.suspend_student(req.body.student);
+            let rs = await Student.update(
+                { suspended: '1' },
+                { where: {email: req.body.student }}    
+            )
 
-            if(rs['Status'] == "Fail") {
-                res.status(500).send({
+            if(rs[0] == 0) {
+                res.status(400).send({
                     "Status": "Fail",
-                    "Message": rs['Message']
+                    "Message": "No student has been updated, please make sure the email is correct."
                 })
             } else {
-                if(rs['Data'] == 0) {
-                    res.status(400).send({
-                        "Status": "Fail",
-                        "Message": "No student has been updated, please make sure the email is correct."
-                    })
-                } else {
-                    res.status(204).send();
-                }
+                res.status(204).send();
             }
         }
         
@@ -170,7 +131,6 @@ const ApiRouter = (regModel, teaModel, stuModel) => {
     */
     router.post('/retrievefornotifications', async function(req, res, next) {
         
-        let teacher = new Teacher();
         let bResult = true;
 
         let teacher_email = req.body.teacher;
@@ -194,43 +154,48 @@ const ApiRouter = (regModel, teaModel, stuModel) => {
             
         if(bResult) {
             // Get registered student
-            let registered_student = await teacher.get_registered_student(teacher_email);
-            if(registered_student['Status'] == "Fail") {
-                res.status(400).send({
-                    "Status": "Fail",
-                    "Message": registered_student['Message']
-                })
+            let arrStudent = [];
 
-                bResult = false;
-            }
-                
-            if(bResult) {
-                // Get student being @mentioned
-                let arrStudent = [];
-                message = message + " "; // Add space to end to make sure the algo below works.
+            let registered_student = await Student.findAll( {
+                include: [{
+                    model: Teacher,
+                    attributes: [],
+                    through: {
+                        model: Registration,
+                        attributes: []
+                    },
+                    where: {email: teacher_email}
+                }],
+                attributes: ['email']
+            } )
 
-                const search = (arrStudent, message, student_email) => {
-                    if(message.indexOf("@") > -1) {
-                        message = message.substr(message.indexOf("@") + 1);
-                        student_email = message.substr(0, message.indexOf(" "));
-                        arrStudent.push(student_email);
-
-                        // Remove the pushed email, get the left of the string
-                        message = message.substr(message.indexOf(" ") + 1);
-                        
-                        search(arrStudent, message, '');
-                    }
+            if(registered_student != '') {
+                for (student of registered_student) {
+                    arrStudent.push(student.email);
                 }
-                search(arrStudent, message, '');
-
-                for (row of registered_student['Data']) {
-                    arrStudent.push(row.email);
-                }
-
-                res.send({
-                    "recipient": arrStudent
-                });
             }
+            
+            // Get student being @mentioned
+            message = message + " "; // Add space to end to make sure the algo below works.
+
+            const search = (arrStudent, message, student_email) => {
+                if(message.indexOf("@") > -1) {
+                    message = message.substr(message.indexOf("@") + 1);
+                    student_email = message.substr(0, message.indexOf(" "));
+                    arrStudent.push(student_email);
+
+                    // Remove the pushed email, get the left of the string
+                    message = message.substr(message.indexOf(" ") + 1);
+                    
+                    search(arrStudent, message, '');
+                }
+            }
+            search(arrStudent, message, '');
+
+            res.send({
+                "recipient": arrStudent
+            });
+            
         }
     })
 
@@ -252,7 +217,6 @@ const ApiRouter = (regModel, teaModel, stuModel) => {
         // Eg: ["teacherjohn@example.com","teacherjohn3@example.com"]
         
         // Initialize objects
-        let teacher = new Teacher();
         let bResult = true;
 
         if(req.query.teacher == undefined) {
@@ -265,7 +229,75 @@ const ApiRouter = (regModel, teaModel, stuModel) => {
         }
             
         if(bResult) {
-            let rs = await teacher.get_common_students(req.query.teacher)
+            if(typeof(req.query.teacher) == 'object') {
+                let arrStudent = [];
+                let arrStudentNew = [];
+                let rs = '';
+
+                for (teacher of req.query.teacher) { 
+                    rs = await Student.findAll({
+                        includeIgnoreAttributes: false,
+                        include: [{
+                            model: Teacher,
+                            through: {
+                                model: Registration
+                            },
+                            where: {email: teacher}
+                        }],
+                        attributes: ['email'],
+                        where: {
+                            suspended: 0
+                        }
+                    })
+
+                    if(arrStudent == '') {
+                        // First email, first array, to be filtered later
+                        for (student of rs) {
+                            arrStudent.push(student.email);
+                        }
+                    } else {
+                        arrStudentNew = [];
+                        
+                        for (student of rs) {
+                            arrStudentNew.push(student.email);
+                        }
+
+                        arrStudent = arrStudent.filter(value => arrStudentNew.includes(value));
+                    }
+                }
+
+                res.send({
+                    "students": arrStudent
+                })
+            } else {
+                let rs = await Student.findAll({
+                    includeIgnoreAttributes: false,
+                    include: [{
+                        model: Teacher,
+                        through: {
+                            model: Registration
+                        },
+                        where: {email: req.query.teacher}
+                    }],
+                    attributes: ['email'],
+                    where: {
+                        suspended: 0
+                    }
+                })
+
+                // Format data before send
+                let arrStudent = [];
+                for (student of rs) {
+                    arrStudent.push(student.email);
+                }
+
+                res.send({
+                    "students": arrStudent
+                })
+            }
+            
+
+            /* let rs = await teacher.get_common_students(req.query.teacher)
 
             if(rs['Status'] == 'Fail') {
                 res.status(500).send({
@@ -280,7 +312,7 @@ const ApiRouter = (regModel, teaModel, stuModel) => {
                 }
     
                 res.send(arrStudent);
-            }
+            } */
         }
     })
     

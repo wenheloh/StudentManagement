@@ -36,10 +36,10 @@ describe("Common Student", () => {
         it("Should return list of students", (done) => {
             chai.request(app)
                 .get('/api/commonstudents')
-                .query("teacher=teacherjohn@example.com&teacher=teacherjohn3@example.com")
+                .query("teacher=teacherloh@example.com&teacher=teacherdavd@example.com")
                 .end((err, res) => {
                     res.should.have.status(200)
-                    res.body.should.be.a('array')
+                    res.body.should.be.a('object')
                     done();
                 })
         })
@@ -54,7 +54,7 @@ describe("Suspend", () => {
             chai.request(app)
                 .post('/api/suspend')
                 .send({
-                    "student": "studentsde@example.com"
+                    "student": "studentTest@example.com"
                 })
                 .end((err, res) => {
                     res.should.have.status(204)
