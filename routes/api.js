@@ -55,20 +55,27 @@ const ApiRouter = (Registration, Teacher, Student) => {
             for(let i=0; i<students_email.length; i++) {   
                 
                 let [rsStudent, created] = await Student.findOrCreate({
+                    attributes: ['id', 'suspended'],
                     where: {email: students_email[i]}, 
                     defaults: {email: students_email[i]}
                 });
                 
                 student_id = rsStudent.get().id;
+
+                if(!created) {
+                    // Should the system unsuspend suspended student? 
+                }
                 
                 try {
-                    let result = await Registration.create({
+                    await Registration.create({
                         TeacherId: teacher_id,
                         StudentId: student_id
                     })
                 } catch(err) {
                     if(err.name == 'SequelizeUniqueConstraintError')
                         sErrorMsg.push("Duplicate entry for student: " + students_email[i])
+                    
+                    bResult = false;
                 }
             }
 
@@ -158,15 +165,15 @@ const ApiRouter = (Registration, Teacher, Student) => {
 
             let registered_student = await Student.findAll( {
                 include: [{
+                    includeIgnoreAttributes: false,
                     model: Teacher,
-                    attributes: [],
                     through: {
-                        model: Registration,
-                        attributes: []
+                        model: Registration
                     },
                     where: {email: teacher_email}
                 }],
-                attributes: ['email']
+                attributes: ['email'],
+                where: {suspended: 0}
             } )
 
             if(registered_student != '') {
